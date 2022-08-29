@@ -3,7 +3,7 @@ use std::{env::current_dir, process::exit};
 
 use kvs::{KvStore, KvsError, Result};
 
-fn main() -> Result<()>  {
+fn main() -> Result<()> {
     let matches = Command::new("kvs")
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
@@ -47,7 +47,7 @@ fn main() -> Result<()>  {
             let key = sub_m.value_of("KEY").unwrap();
             let mut kvs = KvStore::open(current_dir()?)?;
             match kvs.remove(key.to_string()) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(KvsError::KeyNotFound(_)) => {
                     println!("Key not found");
                     exit(1);
