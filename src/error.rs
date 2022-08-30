@@ -8,7 +8,7 @@ pub enum KvsError {
     #[error("Serde error")]
     Serde(#[from] serde_json::Error),
 
-    #[error("No such key: {0}")]
+    #[error("Key not found")]
     KeyNotFound(String),
 
     #[error("Invalid command")]
@@ -16,6 +16,12 @@ pub enum KvsError {
 
     #[error("{0}")]
     StringError(String),
+
+    #[error("sled error: {0}")]
+    Sled(#[from] sled::Error),
+
+    #[error("utf8 error: {0}")]
+    Utf8Error(#[from] std::string::FromUtf8Error),
 }
 
 pub type Result<T> = std::result::Result<T, KvsError>;

@@ -1,7 +1,10 @@
-use clap::{AppSettings, Arg, Command, arg_enum};
-use log::info;
-use std::{env::current_dir, process::exit, net::SocketAddr};
+use clap::arg_enum;
+use log::{info, error, warn};
+use std::env::current_dir;
+use std::net::SocketAddr;
+use std::process::exit; 
 use structopt::StructOpt;
+use std::fs;
 
 use kvs::*;
 
@@ -36,11 +39,56 @@ arg_enum! {
         sled
     }
 }
-fn main() -> Result<()> {
+fn main() {
     env_logger::init();
-    let opt = Opt::from_args();
+    let mut opt = Opt::from_args();
+
+    let res = current_engine().and_then(move |curr_engine| {
+        if opt.engine.is_none() {
+            opt.engine = curr_engine;
+        }
+        if curr_engine.is_some() && opt.engine != curr_engine {
+            error!("Wrong engine!");
+            exit(1);
+        }
+        run(opt)
+    });
+    if let Err(e) = res {
+        error!("{}", e);
+        exit(1);
+    }
+}
+
+fn run(opt: Opt) -> Result<()> {
+    let engine = opt.engine.unwrap_or(DEFAULT_ENGINE);
     info!("kvs-server: {}", env!("CARGO_PKG_VERSION"));
     info!("Listening of address: {}", opt.addr);
     info!("Storage engine: {}", opt.engine.unwrap_or(DEFAULT_ENGINE));
+
+    fs::write(current_dir()?.join("engine"), format!("{}", engine))?;
+    match engine {
+        Engine::kvs => run_with_engine(KvStore::open(current_dir()?)?, opt.addr),
+        Engine::sled => run_with_engine(SledKvsEngine::new(sled::open(current_dir()?)?), opt.addr),
+    };
     Ok(())
+}
+
+fn run_with_engine<E: KvsEngine>(engine: E, addr: SocketAddr) -> Result<()> {
+    let mut server = KvsServer::new(engine);
+    server.run(addr)
+}
+
+fn current_engine() -> Result<Option<Engine>> {
+    let engine = current_dir()?.join("engine");
+    if !engine.exists() {
+        return Ok(None);
+    }
+
+    match fs::read_to_string(engine)?.parse() {
+        Ok(engine) => Ok(Some(engine)),
+        Err(e) => {
+            warn!("The content of engine file is invalid: {}", e);
+            Ok(None)
+        }
+    }
 }

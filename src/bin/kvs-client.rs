@@ -1,8 +1,8 @@
 use clap::{AppSettings, Arg, Command};
-use std::{env::current_dir, process::exit, net::SocketAddr};
+use std::{env::current_dir, net::SocketAddr, process::exit};
 use structopt::StructOpt;
 
-use kvs::{KvStore, KvsError, Result};
+use kvs::{KvStore, KvsClient, KvsError, Result};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "kvs-client")]
@@ -60,29 +60,21 @@ fn main() -> Result<()> {
     let opt = Opt::from_args();
     match opt.command {
         Subcommands::Get { key, addr } => {
-            let mut kvs = KvStore::open(current_dir()?)?;
-            if let Some(res) = kvs.get(key)? {
+            let mut client = KvsClient::connect(addr)?;
+            if let Some(res) = client.get(key)? {
                 println!("{}", res);
             } else {
                 println!("Key not found");
             }
         }
         Subcommands::Set { key, value, addr } => {
-            let mut kvs = KvStore::open(current_dir()?)?;
-            kvs.set(key, value)?;
+            let mut client = KvsClient::connect(addr)?;
+            client.set(key, value)?;
         }
         Subcommands::Rm { key, addr } => {
-            let mut kvs = KvStore::open(current_dir()?)?;
-            match kvs.remove(key) {
-                Ok(_) => {}
-                Err(KvsError::KeyNotFound(_)) => {
-                    println!("Key not found");
-                    exit(1);
-                }
-                Err(e) => return Err(e),
-            }
+            let mut client = KvsClient::connect(addr)?;
+            client.remove(key)?;
         }
-
     }
     Ok(())
 }

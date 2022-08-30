@@ -1,11 +1,13 @@
 use std::io::{BufReader, BufWriter};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 
-use crate::{KvsEngine, KvsError, Request, Result, SetResponse, GetResponse, RemoveResponse, Response};
+use crate::{
+    GetResponse, KvsEngine, KvsError, RemoveResponse, Request, Response, Result, SetResponse,
+};
 
+use log::{debug, error, info};
 use serde::Deserialize;
 use serde_json::de::{Deserializer, IoRead};
-use log::{debug, error, info};
 
 // key value store client
 pub struct KvsServer<E: KvsEngine> {
@@ -27,6 +29,7 @@ impl<E: KvsEngine> KvsServer<E> {
             let request = Request::deserialize(&mut deserializer)?;
             debug!("Receive request from {}: {:?}", peer, request);
             let response = self.handle_request(request);
+            debug!("Send response back to {}: {:?}", peer, response);
             serde_json::to_writer(writer, &response)?;
         }
         Ok(())
@@ -40,13 +43,13 @@ impl<E: KvsEngine> KvsServer<E> {
         }
     }
     fn handle_get(&mut self, key: String) -> GetResponse {
-        match self.engine.get(key){
-            Ok(value) => GetResponse::Ok(Some(value)),
+        match self.engine.get(key) {
+            Ok(value) => GetResponse::Ok(value),
             Err(e) => GetResponse::Err(e.to_string()),
         }
     }
     fn handle_set(&mut self, key: String, value: String) -> SetResponse {
-        match self.engine.set(key, value){
+        match self.engine.set(key, value) {
             Ok(_) => SetResponse::Ok(()),
             Err(e) => SetResponse::Err(e.to_string()),
         }

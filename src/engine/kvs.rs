@@ -8,6 +8,7 @@ use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_json::Deserializer;
 
+use super::KvsEngine;
 use crate::error::{KvsError, Result};
 
 const COMPACTION_THRESHOLD: u64 = 1024 * 1024;
@@ -76,57 +77,6 @@ impl KvStore {
         })
     }
 
-    pub fn set(&mut self, key: String, val: String) -> Result<()> {
-        let command = Command::Set {
-            key: key.clone(),
-            val,
-        };
-        let pos = self.writer.pos;
-        serde_json::to_writer(&mut self.writer, &command)?;
-        self.writer.flush()?;
-        let cmd_pos = CommandPos {
-            gen: self.current_gen,
-            pos,
-            len: self.writer.pos - pos,
-        };
-        debug!("Set cmd: {:?}", cmd_pos);
-        if let Some(old_cmd) = self.index.insert(key, cmd_pos) {
-            self.uncompacted += old_cmd.len;
-        }
-        if self.uncompacted > COMPACTION_THRESHOLD {
-            self.compact()?;
-        }
-        Ok(())
-    }
-
-    pub fn get(&mut self, key: String) -> Result<Option<String>> {
-        if let Some(cmd) = self.index.get(&key) {
-            // self.reader.seek(SeekFrom::Start(*pos))?;
-            let reader = self.readers.get_mut(&cmd.gen).unwrap();
-            reader.seek(SeekFrom::Start(cmd.pos))?;
-            let cmd_reader = reader.take(cmd.len);
-            debug!("Read cmd: {:?}", cmd);
-            if let Command::Set { val, .. } = serde_json::from_reader(cmd_reader)? {
-                Ok(Some(val))
-            } else {
-                Err(KvsError::UnexpectedCommandType)
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub fn remove(&mut self, key: String) -> Result<()> {
-        if let Some(_res) = self.index.remove(&key) {
-            let command = Command::Rm { key: key.clone() };
-            serde_json::to_writer(&mut self.writer, &command)?;
-            self.writer.flush()?;
-            Ok(())
-        } else {
-            Err(KvsError::KeyNotFound(key))
-        }
-    }
-
     pub fn compact(&mut self) -> Result<()> {
         let compaction_gen = self.current_gen + 1;
         self.current_gen += 1;
@@ -167,6 +117,60 @@ impl KvStore {
 
     fn new_log_file_writer(&mut self, gen: u64) -> Result<BufWriterWithPos<File>> {
         new_log_file_writer(&self.path, gen, &mut self.readers)
+    }
+}
+
+impl KvsEngine for KvStore {
+
+    fn set(&mut self, key: String, val: String) -> Result<()> {
+        let command = Command::Set {
+            key: key.clone(),
+            val,
+        };
+        let pos = self.writer.pos;
+        serde_json::to_writer(&mut self.writer, &command)?;
+        self.writer.flush()?;
+        let cmd_pos = CommandPos {
+            gen: self.current_gen,
+            pos,
+            len: self.writer.pos - pos,
+        };
+        debug!("Set cmd: {:?}", cmd_pos);
+        if let Some(old_cmd) = self.index.insert(key, cmd_pos) {
+            self.uncompacted += old_cmd.len;
+        }
+        if self.uncompacted > COMPACTION_THRESHOLD {
+            self.compact()?;
+        }
+        Ok(())
+    }
+
+    fn get(&mut self, key: String) -> Result<Option<String>> {
+        if let Some(cmd) = self.index.get(&key) {
+            // self.reader.seek(SeekFrom::Start(*pos))?;
+            let reader = self.readers.get_mut(&cmd.gen).unwrap();
+            reader.seek(SeekFrom::Start(cmd.pos))?;
+            let cmd_reader = reader.take(cmd.len);
+            debug!("Read cmd: {:?}", cmd);
+            if let Command::Set { val, .. } = serde_json::from_reader(cmd_reader)? {
+                Ok(Some(val))
+            } else {
+                Err(KvsError::UnexpectedCommandType)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn remove(&mut self, key: String) -> Result<()> {
+        if let Some(_res) = self.index.remove(&key) {
+            let command = Command::Rm { key: key.clone() };
+            serde_json::to_writer(&mut self.writer, &command)?;
+            self.writer.flush()?;
+            Ok(())
+        } else {
+            Err(KvsError::KeyNotFound(key))
+        }
     }
 }
 
@@ -215,7 +219,7 @@ fn load(
         debug!("{:?}", command);
         let new_pos = stream.byte_offset() as u64;
         match command {
-            Ok(Command::Set { key, val:_ }) => {
+            Ok(Command::Set { key, val: _ }) => {
                 let cmd_pos = CommandPos {
                     gen,
                     pos,

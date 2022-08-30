@@ -1,10 +1,10 @@
+use std::io::{BufReader, BufWriter, Write};
 use std::net::{TcpStream, ToSocketAddrs};
-use std::io::{BufReader, BufWriter};
 
-use crate::{KvsError, Result};
+use crate::{GetResponse, KvsError, RemoveResponse, Response, Request, Result, SetResponse};
 
 use serde::Deserialize;
-use serde_json::de::{IoRead, Deserializer};
+use serde_json::de::{Deserializer, IoRead};
 
 // key value store client
 pub struct KvsClient {
@@ -12,9 +12,7 @@ pub struct KvsClient {
     writer: BufWriter<TcpStream>,
 }
 
-
 impl KvsClient {
-
     // connect to given address
     pub fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self> {
         let stream = TcpStream::connect(addr).unwrap();
@@ -25,16 +23,38 @@ impl KvsClient {
     }
 
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        Ok(())
+        let req = Request::Set { key, value };
+        serde_json::to_writer(&mut self.writer, &req)?;
+        self.writer.flush()?;
+        let resp = Response::deserialize(&mut self.reader)?;
+        match resp {
+            Response::Set(SetResponse::Ok(_)) => Ok(()),
+            Response::Set(SetResponse::Err(e)) => Err(KvsError::StringError(e)),
+            _ => Err(KvsError::UnexpectedCommandType),
+        }
     }
 
-    pub fn get(&mut self, key: String) -> Result<String> {
-        Ok(String::new())
+    pub fn get(&mut self, key: String) -> Result<Option<String>> {
+        let req = Request::Get { key };
+        serde_json::to_writer(&mut self.writer, &req)?;
+        self.writer.flush()?;
+        let resp = Response::deserialize(&mut self.reader)?;
+        match resp {
+            Response::Get(GetResponse::Ok(value)) => Ok(value),
+            Response::Get(GetResponse::Err(e)) => Err(KvsError::StringError(e)),
+            _ => Err(KvsError::UnexpectedCommandType),
+        }
     }
 
     pub fn remove(&mut self, key: String) -> Result<()> {
-        Ok(())
+        let req = Request::Remove { key };
+        serde_json::to_writer(&mut self.writer, &req)?;
+        self.writer.flush()?;
+        let resp = Response::deserialize(&mut self.reader)?;
+        match resp {
+            Response::Remove(RemoveResponse::Ok(_)) => Ok(()),
+            Response::Remove(RemoveResponse::Err(e)) => Err(KvsError::StringError(e)),
+            _ => Err(KvsError::UnexpectedCommandType),
+        }
     }
 }
-
-
