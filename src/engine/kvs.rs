@@ -17,6 +17,7 @@ const COMPACTION_THRESHOLD: u64 = 1024 * 1024;
 /// # Example:
 /// ```rust
 /// # use kvs::{KvStore, Result};
+/// # use crate::kvs::KvsEngine;
 /// # fn try_main() -> Result<()> {
 /// use std::env::current_dir;
 /// let mut store = KvStore::open(current_dir()?)?;
