@@ -13,6 +13,9 @@ pub enum KvsError {
 
     #[error("Invalid command")]
     UnexpectedCommandType,
+
+    #[error("{0}")]
+    StringError(String),
 }
 
 pub type Result<T> = std::result::Result<T, KvsError>;
