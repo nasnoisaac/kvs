@@ -9,7 +9,6 @@ pub enum Request {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Response {
-    Set {},
-    Get { value: String },
-    Remove {},
+    Ok(),
+    Err(String),
 }
