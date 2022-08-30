@@ -1,7 +1,7 @@
 use std::io::{BufReader, BufWriter};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 
-use crate::{KvsEngine, KvsError, Request, Response, Result};
+use crate::{KvsEngine, KvsError, Request, Result, SetResponse, GetResponse, RemoveResponse, Response};
 
 use serde::Deserialize;
 use serde_json::de::{Deserializer, IoRead};
@@ -34,27 +34,27 @@ impl<E: KvsEngine> KvsServer<E> {
 
     fn handle_request(&mut self, request: Request) -> Response {
         match request {
-            Request::Get { key } => self.handle_get(key),
-            Request::Set { key, value } => self.handle_set(key, value),
-            Request::Remove { key } => self.handle_remove(key),
+            Request::Get { key } => Response::Get(self.handle_get(key)),
+            Request::Set { key, value } => Response::Set(self.handle_set(key, value)),
+            Request::Remove { key } => Response::Remove(self.handle_remove(key)),
         }
     }
-    fn handle_get(&mut self, key: String) -> Response {
+    fn handle_get(&mut self, key: String) -> GetResponse {
         match self.engine.get(key){
-            Ok(value) => Response::Ok(),
-            Err(e) => Response::Err(e.to_string()),
+            Ok(value) => GetResponse::Ok(Some(value)),
+            Err(e) => GetResponse::Err(e.to_string()),
         }
     }
-    fn handle_set(&mut self, key: String, value: String) -> Response {
+    fn handle_set(&mut self, key: String, value: String) -> SetResponse {
         match self.engine.set(key, value){
-            Ok(_) => Response::Ok(),
-            Err(e) => Response::Err(e.to_string()),
+            Ok(_) => SetResponse::Ok(()),
+            Err(e) => SetResponse::Err(e.to_string()),
         }
     }
-    fn handle_remove(&mut self, key: String) -> Response {
+    fn handle_remove(&mut self, key: String) -> RemoveResponse {
         match self.engine.remove(key) {
-            Ok(_) => Response::Ok(),
-            Err(e) => Response::Err(e.to_string()),
+            Ok(_) => RemoveResponse::Ok(()),
+            Err(e) => RemoveResponse::Err(e.to_string()),
         }
     }
 }
