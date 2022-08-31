@@ -1,13 +1,11 @@
 use std::io::{BufReader, BufWriter};
-use std::net::{TcpListener, TcpStream, ToSocketAddrs};
+use std::net::{TcpListener, ToSocketAddrs};
 
-use crate::{
-    GetResponse, KvsEngine, KvsError, RemoveResponse, Request, Response, Result, SetResponse,
-};
+use crate::{GetResponse, KvsEngine, RemoveResponse, Request, Response, Result, SetResponse};
 
-use log::{debug, error, info};
+use log::debug;
 use serde::Deserialize;
-use serde_json::de::{Deserializer, IoRead};
+use serde_json::de::Deserializer;
 
 // key value store client
 pub struct KvsServer<E: KvsEngine> {

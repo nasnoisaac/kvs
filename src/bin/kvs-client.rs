@@ -1,8 +1,7 @@
-use clap::{AppSettings, Arg, Command};
-use std::{env::current_dir, net::SocketAddr, process::exit};
+use std::net::SocketAddr;
 use structopt::StructOpt;
 
-use kvs::{KvStore, KvsClient, KvsError, Result};
+use kvs::{KvsClient, Result};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "kvs-client")]
