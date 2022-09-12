@@ -1,10 +1,10 @@
 use clap::arg_enum;
-use log::{info, error, warn};
+use log::{error, info, warn};
 use std::env::current_dir;
-use std::net::SocketAddr;
-use std::process::exit; 
-use structopt::StructOpt;
 use std::fs;
+use std::net::SocketAddr;
+use std::process::exit;
+use structopt::StructOpt;
 
 use kvs::*;
 
