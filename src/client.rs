@@ -1,7 +1,7 @@
 use std::io::{BufReader, BufWriter, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 
-use crate::{GetResponse, KvsError, RemoveResponse, Response, Request, Result, SetResponse};
+use crate::{GetResponse, KvsError, RemoveResponse, Request, Response, Result, SetResponse};
 
 use serde::Deserialize;
 use serde_json::de::{Deserializer, IoRead};
