@@ -1,7 +1,7 @@
 use crate::error::Result;
 
 /// Trait for key-value store engine.
-pub trait KvsEngine {
+pub trait KvsEngine: Clone + Send + 'static {
     fn set(&self, key: String, value: String) -> Result<()>;
     fn get(&self, key: String) -> Result<Option<String>>;
     fn remove(&self, key: String) -> Result<()>;
